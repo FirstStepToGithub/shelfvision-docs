@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShelfVision — Planogram compliance for retail shelves</title>
+<meta name="description" content="Flutter + TFLite app for real-time retail shelf planogram compliance. Energy drink SKU detection on Snapdragon 865." />
+<style>
+  :root{
+    --bg:#0b1020; --panel:#111733; --panel-2:#1a2150; --ink:#e9ecff;
+    --muted:#9aa3d4; --accent:#7cf0c2; --accent-2:#9ab5ff; --warn:#ff9f7a;
+    --red:#ff6b7a; --green:#7cf0c2; --line:rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif}
+  a{color:var(--accent-2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px}
+  code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:4px}
+  pre{background:#070b1a;border:1px solid var(--line);border-radius:8px;padding:14px;overflow:auto}
+
+  .nav{position:sticky;top:0;backdrop-filter:blur(12px);background:rgba(11,16,32,.7);border-bottom:1px solid var(--line);z-index:10}
+  .nav-inner{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .brand{font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+  .brand-dot{width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 0 12px var(--accent)}
+  .nav a{color:var(--muted);font-size:14px}
+  .nav a:hover{color:var(--ink);text-decoration:none}
+
+  .hero{max-width:1100px;margin:0 auto;padding:64px 20px 40px}
+  .eyebrow{color:var(--accent);font-size:13px;letter-spacing:.15em;text-transform:uppercase;font-weight:600;margin-bottom:14px}
+  h1{font-size:clamp(34px,5vw,56px);line-height:1.05;margin:0 0 16px;letter-spacing:-.02em}
+  .lede{font-size:19px;color:var(--muted);max-width:720px;margin:0 0 28px}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-weight:600;font-size:14px;transition:transform .08s ease}
+  .btn:hover{text-decoration:none;transform:translateY(-1px)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#07122a;border:none}
+
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1100px;margin:12px auto 0;padding:0 20px}
+  .kpi .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .kpi .num{font-size:26px;font-weight:700;letter-spacing:-.01em}
+  .kpi .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em;margin-top:4px}
+  @media (max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}}
+
+  section{max-width:1100px;margin:56px auto;padding:0 20px}
+  h2{font-size:28px;letter-spacing:-.01em;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 22px}
+
+  .grid-2{display:grid;grid-template-columns:1.1fr .9fr;gap:24px}
+  @media (max-width:860px){.grid-2{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .panel h3{margin:0 0 10px;font-size:17px}
+  .panel p{color:var(--muted);margin:0 0 10px}
+
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px}
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative}
+  .stage .tag{position:absolute;top:-10px;left:14px;background:var(--panel-2);border:1px solid var(--line);padding:2px 10px;border-radius:999px;font-size:11px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+  .stage h4{margin:6px 0 6px;font-size:15px}
+  .stage p{color:var(--muted);font-size:13px;margin:0}
+  @media (max-width:860px){.pipe{grid-template-columns:1fr 1fr}}
+
+  /* timeline */
+  .tl{position:relative;padding-left:24px}
+  .tl::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:linear-gradient(var(--accent),var(--accent-2),transparent)}
+  .tl li{list-style:none;margin:0 0 18px;position:relative}
+  .tl li::before{content:"";position:absolute;left:-22px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(124,240,194,.15)}
+  .tl li.done::before{background:var(--green)}
+  .tl li.wip::before{background:var(--warn);box-shadow:0 0 0 3px rgba(255,159,122,.2)}
+  .tl li.plan::before{background:var(--muted);box-shadow:0 0 0 3px rgba(154,163,212,.15)}
+  .tl h4{margin:0 0 4px;font-size:15px}
+  .tl .status{font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-right:8px;color:var(--muted)}
+  .tl li.done .status{color:var(--green)}
+  .tl li.wip .status{color:var(--warn)}
+  .tl p{color:var(--muted);margin:0}
+
+  /* decisions */
+  .decs{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .dec{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .dec h4{margin:0 0 4px;font-size:14px}
+  .dec p{color:var(--muted);font-size:13px;margin:0}
+  .dec .date{font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase}
+  @media (max-width:720px){.decs{grid-template-columns:1fr}}
+
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+
+  .footer{border-top:1px solid var(--line);margin-top:60px;padding:24px 20px;color:var(--muted);font-size:13px;text-align:center}
+
+  .chip{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:11px;color:var(--muted);margin-right:6px;margin-bottom:4px}
+
+  .hero-visual{margin-top:36px;background:linear-gradient(135deg,rgba(124,240,194,.1),rgba(154,181,255,.08));border:1px solid var(--line);border-radius:16px;padding:26px;position:relative;overflow:hidden}
+  .hv-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:600px;margin:0 auto}
+  .hv-cell{aspect-ratio:1/1.4;border-radius:6px;border:2px solid var(--green);background:rgba(124,240,194,.08);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:10px;color:var(--green);font-weight:700}
+  .hv-cell.bad{border-color:var(--red);background:rgba(255,107,122,.1);color:var(--red)}
+  .hv-cell.empty{border-color:rgba(255,255,255,.15);background:transparent;color:var(--muted);border-style:dashed}
+  .hv-legend{text-align:center;color:var(--muted);font-size:12px;margin-top:14px}
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <div class="brand"><span class="brand-dot"></span> ShelfVision</div>
+  <a href="#overview">Overview</a>
+  <a href="#pipeline">Pipeline</a>
+  <a href="#roadmap">Roadmap</a>
+  <a href="#decisions">Decisions</a>
+  <a href="#stack">Stack</a>
+  <a href="docs/">Docs</a>
+  <a href="https://github.com/FirstStepToGithub/shelfvision-docs" target="_blank" rel="noopener">GitHub ↗</a>
+</div></nav>
+
+<header class="hero">
+  <div class="eyebrow">Retail × Computer vision · Uzbekistan</div>
+  <h1>Real-time planogram compliance for retail shelves.</h1>
+  <p class="lede">A Flutter + TFLite mobile app that detects energy drink SKUs, groups them by shelf row, compares against the planogram, and overlays green/red boxes live on the camera feed — all on-device, on a mid-range phone.</p>
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="#roadmap">See the roadmap →</a>
+    <a class="btn" href="docs/architecture.md">Read the architecture</a>
+    <a class="btn" href="https://github.com/FirstStepToGithub/shelfvision-docs" target="_blank" rel="noopener">View on GitHub</a>
+  </div>
+
+  <div class="hero-visual">
+    <div class="hv-grid">
+      <div class="hv-cell">A</div>
+      <div class="hv-cell">A</div>
+      <div class="hv-cell bad">H→A</div>
+      <div class="hv-cell">H</div>
+      <div class="hv-cell">H</div>
+      <div class="hv-cell empty">·</div>
+      <div class="hv-cell">R</div>
+      <div class="hv-cell">R</div>
+      <div class="hv-cell bad">M→R</div>
+      <div class="hv-cell">M</div>
+      <div class="hv-cell">M</div>
+      <div class="hv-cell empty">·</div>
+    </div>
+    <div class="hv-legend">Row 1: Adrenaline → Hell · Row 2: Red Bull → Monster · <span style="color:var(--red)">red</span> = wrong SKU · <span style="color:var(--muted)">dashed</span> = missing</div>
+  </div>
+</header>
+
+<div class="kpi">
+  <div class="card"><div class="num">34</div><div class="lbl">SKU classes</div></div>
+  <div class="card"><div class="num">~129</div><div class="lbl">Annotated images</div></div>
+  <div class="card"><div class="num">~8,059</div><div class="lbl">Auto-labelled boxes</div></div>
+  <div class="card"><div class="num">~12 MB</div><div class="lbl">On-device model</div></div>
+</div>
+
+<section id="overview">
+  <h2>What it does</h2>
+  <p class="sub">One sentence: point the phone at a shelf, and instantly see which products are in the wrong place.</p>
+  <div class="grid-2">
+    <div class="panel">
+      <h3>The problem</h3>
+      <p>Retail merchandisers check hundreds of shelves per day. Today they compare a printed planogram against what they see by eye — slow, inconsistent, and hard to audit.</p>
+      <p>A phone that can do this in real time turns a 20-minute manual check into a 20-second scan.</p>
+    </div>
+    <div class="panel">
+      <h3>The approach</h3>
+      <p>A <strong>hybrid multi-stage pipeline</strong>: one model finds product-shaped things (trained on 1.7M boxes from SKU110K), a second identifies the brand (34-class energy-drink classifier), and app logic handles shelf grouping + compliance.</p>
+      <p>Stages are independent, so adding a new SKU doesn't require retraining the generic detector.</p>
+    </div>
+  </div>
+</section>
+
+<section id="pipeline">
+  <h2>Pipeline</h2>
+  <p class="sub">Each stage is testable, swappable, and independently trained.</p>
+  <div class="pipe">
+    <div class="stage"><span class="tag">Stage 1</span>
+      <h4>Generic detector</h4>
+      <p>YOLOv8s trained on SKU110K (1 class). Finds every product-shaped thing on the shelf, regardless of brand.</p>
+    </div>
+    <div class="stage"><span class="tag">Stage 2</span>
+      <h4>Brand classifier</h4>
+      <p>34-class YOLOv8 trained on <code>energys</code>. Falls back to MobileNetV3 embeddings in Phase 3.5.</p>
+    </div>
+    <div class="stage"><span class="tag">Stage 3</span>
+      <h4>Shelf grouping</h4>
+      <p>Pure-Dart greedy clusterer: groups detected boxes by y-coordinate into rows.</p>
+    </div>
+    <div class="stage"><span class="tag">Stage 4</span>
+      <h4>Compliance overlay</h4>
+      <p>Compares detected rows vs <code>planogram.json</code>. <code>CustomPainter</code> draws green/red boxes on the live preview.</p>
+    </div>
+  </div>
+  <p style="margin-top:18px">Full breakdown: <a href="docs/pipeline-stages.md">docs/pipeline-stages.md</a> · Architecture: <a href="docs/architecture.md">docs/architecture.md</a></p>
+</section>
+
+<section id="roadmap">
+  <h2>Roadmap</h2>
+  <p class="sub">Phased delivery — clear handoffs between scaffold, inference, compliance, and active learning.</p>
+  <ul class="tl">
+    <li class="done"><h4><span class="status">Done</span> Phase 1 — Project scaffold</h4>
+      <p>Flutter project, GitHub Actions CI, <code>.gitignore</code>, planogram schema.</p></li>
+    <li class="done"><h4><span class="status">Done</span> Phase 2 — Core inference scaffold</h4>
+      <p>CameraService, Dart Isolate + TFLite runtime, Android config, compliance-engine stubs.</p></li>
+    <li class="wip"><h4><span class="status">Next</span> Phase 3 — Full compliance engine</h4>
+      <p>Shelf grouping + planogram comparison + CustomPainter overlay. First demo-ready build.</p></li>
+    <li class="plan"><h4><span class="status">Planned</span> Phase 3.5 — Embedding knowledge base</h4>
+      <p>MobileNetV3 embeddings, nearest-neighbour fallback, auto-save low-confidence crops, DBSCAN on unknowns.</p></li>
+    <li class="plan"><h4><span class="status">Planned</span> Phase 4 — Review UI</h4>
+      <p>In-app review of pending crops → swipe-to-label → bulk push back to Roboflow.</p></li>
+    <li class="plan"><h4><span class="status">Speculative</span> Phase 5 — Multi-category expansion</h4>
+      <p>Generalise beyond energy drinks: sparkling water, juices, etc. Stage 1 unchanged; new Stage 2 classifier per category.</p></li>
+  </ul>
+  <p>Full details: <a href="docs/roadmap.md">docs/roadmap.md</a></p>
+</section>
+
+<section id="decisions">
+  <h2>Key decisions</h2>
+  <p class="sub">A running log — each with the reason and consequences. Full log in <a href="docs/decisions-log.md">docs/decisions-log.md</a>.</p>
+  <div class="decs">
+    <div class="dec"><div class="date">2026-04</div><h4>SKU110K stays separate from <code>energys</code></h4><p>Merging would dilute a 1.7M-box generic detector with 129 brand images. Separation of concerns wins.</p></div>
+    <div class="dec"><div class="date">2026-04</div><h4>FP16 export, not INT8</h4><p>INT8 calibration needs <code>data.yaml</code> that wasn't available. Revisit later.</p></div>
+    <div class="dec"><div class="date">2026-04</div><h4>JPEG uploads to Roboflow</h4><p>WebP caused annotation-matching failures. YOLOv8 rescales internally, so format is irrelevant to quality.</p></div>
+    <div class="dec"><div class="date">2026-04</div><h4>Colab bootstrap for Label Assist</h4><p>Roboflow Free plan blocks workspace-model Label Assist. External Colab loop is the workaround.</p></div>
+    <div class="dec"><div class="date">2026-04</div><h4>50/30/20 split for small datasets</h4><p>Default split gave 3 val images. One FN tanks mAP by 33%. Bigger val set = trustworthy numbers.</p></div>
+    <div class="dec"><div class="date">2026-04</div><h4>Canonical class names</h4><p>Merging <code>adrenaline_250ml</code> + <code>adrenaline_original_250ml</code> → single canonical. Full class review underway.</p></div>
+  </div>
+</section>
+
+<section id="stack">
+  <h2>Stack</h2>
+  <p class="sub">Everything the project depends on.</p>
+  <table>
+    <tr><th>Layer</th><th>Tech</th><th>Why</th></tr>
+    <tr><td>Mobile</td><td>Flutter · Dart Isolates · TFLite</td><td>Cross-platform, strong on-device ML story.</td></tr>
+    <tr><td>Detector</td><td>YOLOv8s (Ultralytics)</td><td>Small, fast, excellent transfer learning.</td></tr>
+    <tr><td>Training</td><td>Google Colab (T4 GPU)</td><td>Free, fast enough for 150 epochs on small datasets.</td></tr>
+    <tr><td>Data</td><td>Roboflow (Free plan)</td><td>Annotation + versioning + YOLO export.</td></tr>
+    <tr><td>Datasets</td><td>SKU110K · <code>new-way-energy</code></td><td>1.7M boxes generic + 34-class brand-specific.</td></tr>
+    <tr><td>Target device</td><td>Poco F2 Pro (Snapdragon 865, Adreno 650)</td><td>Real-world mid-range reference device.</td></tr>
+    <tr><td>Future</td><td>MobileNetV3 embeddings · DBSCAN</td><td>Fast new-SKU addition + unknown discovery.</td></tr>
+    <tr><td>DevOps</td><td>GitHub · Actions · Obsidian Git</td><td>Code + docs + knowledge base, one push.</td></tr>
+  </table>
+  <div style="margin-top:18px">
+    <span class="chip">Flutter</span><span class="chip">Dart</span><span class="chip">TFLite</span>
+    <span class="chip">YOLOv8s</span><span class="chip">Ultralytics</span><span class="chip">Roboflow</span>
+    <span class="chip">Colab · T4</span><span class="chip">SKU110K</span><span class="chip">MobileNetV3</span>
+    <span class="chip">DBSCAN</span><span class="chip">CustomPainter</span><span class="chip">Isolates</span>
+  </div>
+</section>
+
+<section>
+  <h2>Documentation</h2>
+  <p class="sub">Deep dives. Also available as an Obsidian vault — see <a href="docs/obsidian-setup.md">obsidian-setup.md</a>.</p>
+  <table>
+    <tr><th>Topic</th><th>Description</th></tr>
+    <tr><td><a href="docs/architecture.md">Architecture</a></td><td>Hybrid multi-stage pipeline, component boundaries, data flow.</td></tr>
+    <tr><td><a href="docs/pipeline-stages.md">Pipeline stages</a></td><td>Per-stage specs for Stage 1–4 + Phase 3.5 sidecar.</td></tr>
+    <tr><td><a href="docs/roadmap.md">Roadmap</a></td><td>Phased delivery plan with aspirational timeline.</td></tr>
+    <tr><td><a href="docs/decisions-log.md">Decisions log</a></td><td>Why the non-obvious choices were made.</td></tr>
+    <tr><td><a href="docs/model-training.md">Model training</a></td><td>Roboflow + Colab bootstrap workflow, auto-labelling, export.</td></tr>
+    <tr><td><a href="docs/flutter-app.md">Flutter app</a></td><td>Module layout, isolate strategy, planogram schema, CI/CD.</td></tr>
+    <tr><td><a href="docs/glossary.md">Glossary</a></td><td>Every term defined in plain English.</td></tr>
+    <tr><td><a href="docs/obsidian-setup.md">Obsidian setup</a></td><td>Clone vault, install obsidian-git, daily workflow.</td></tr>
+  </table>
+</section>
+
+<footer class="footer">
+  Built by John · <a href="https://github.com/FirstStepToGithub/shelfvision-docs">FirstStepToGithub/shelfvision-docs</a> · Last updated 2026-04-21
+</footer>
+
+</body>
+</html>
